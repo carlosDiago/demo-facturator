@@ -79,6 +79,10 @@ Skills disponibles actualmente:
 - `drizzle-migrations`
 - `documentation-guidelines`
 
+Prompts de prueba:
+
+- `docs/skills-test-prompts.md`
+
 Para que se descubran correctamente, abre la herramienta desde la raiz del repositorio.
 
 ## Nota sobre Supabase
