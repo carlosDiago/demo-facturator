@@ -130,7 +130,7 @@ export class PaymentsService {
             operators.eq(table.organizationId, organizationId),
           ),
         with: {
-          invoiceItems: {
+          items: {
             orderBy: (table: any, operators: any) => [operators.asc(table.sortOrder)],
           },
         },
@@ -165,7 +165,7 @@ export class PaymentsService {
 }
 
 type InvoiceWithItems = typeof invoices.$inferSelect & {
-  invoiceItems: Array<{
+  items: Array<{
     id: string;
     sortOrder: number;
     description: string;
@@ -217,7 +217,7 @@ function mapInvoice(invoice: InvoiceWithItems) {
     issuedAt: invoice.issuedAt?.toISOString() ?? null,
     cancelledAt: invoice.cancelledAt?.toISOString() ?? null,
     cancellationReason: invoice.cancellationReason,
-    items: invoice.invoiceItems.map((item) => ({
+    items: invoice.items.map((item) => ({
       id: item.id,
       sortOrder: item.sortOrder,
       description: item.description,

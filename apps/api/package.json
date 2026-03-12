@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "nest start --watch",
+    "dev": "sh -c 'nest build --watch & while [ ! -f dist/apps/api/src/main.js ]; do sleep 1; done; node --watch dist/apps/api/src/main.js'",
     "build": "nest build",
-    "start": "node dist/main",
+    "start": "node dist/apps/api/src/main.js",
     "lint": "node -e \"console.log('API lint configuration pending')\"",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "test": "node -e \"console.log('No tests configured for api yet')\""
