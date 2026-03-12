@@ -90,3 +90,9 @@ export const draftInvoiceSchema = z.object({
 });
 
 export type DraftInvoiceInput = z.infer<typeof draftInvoiceSchema>;
+
+export const cancelInvoiceSchema = z.object({
+  reason: z.string().min(5).max(1000),
+});
+
+export type CancelInvoiceInput = z.infer<typeof cancelInvoiceSchema>;

@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import type {
+  InvoiceActionResponse,
   InvoiceResponse,
   InvoicesListResponse,
 } from "@demo-facturator/shared";
@@ -80,5 +81,24 @@ export class InvoicesController {
   ): Promise<InvoiceResponse> {
     const organization = await this.authService.requireCurrentOrganization(auth.user.id);
     return this.invoicesService.duplicate(organization.id, auth.user.id, id);
+  }
+
+  @Post(":id/issue")
+  async issue(
+    @CurrentAuth() auth: NonNullable<AuthenticatedRequest["auth"]>,
+    @Param("id") id: string,
+  ): Promise<InvoiceActionResponse> {
+    const organization = await this.authService.requireCurrentOrganization(auth.user.id);
+    return this.invoicesService.issue(organization.id, auth.user.id, id);
+  }
+
+  @Post(":id/cancel")
+  async cancel(
+    @CurrentAuth() auth: NonNullable<AuthenticatedRequest["auth"]>,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ): Promise<InvoiceActionResponse> {
+    const organization = await this.authService.requireCurrentOrganization(auth.user.id);
+    return this.invoicesService.cancel(organization.id, auth.user.id, id, body);
   }
 }

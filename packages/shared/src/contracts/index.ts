@@ -48,3 +48,8 @@ export type InvoiceResponse = {
 export type InvoicesListResponse = {
   invoices: Invoice[];
 };
+
+export type InvoiceActionResponse = {
+  invoice: Invoice;
+  message: string;
+};

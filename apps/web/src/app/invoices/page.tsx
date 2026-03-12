@@ -5,6 +5,8 @@ const draftEndpoints = [
   "PUT /api/invoices/:id",
   "DELETE /api/invoices/:id",
   "POST /api/invoices/:id/duplicate",
+  "POST /api/invoices/:id/issue",
+  "POST /api/invoices/:id/cancel",
 ];
 
 export default function InvoicesPage() {
@@ -15,9 +17,9 @@ export default function InvoicesPage() {
           <span className="inline-flex rounded-full border border-emerald-900/15 bg-emerald-100 px-4 py-1 text-sm uppercase tracking-[0.2em] text-emerald-950">
             Facturas
           </span>
-          <h1 className="text-4xl font-semibold tracking-tight">Borradores y duplicado</h1>
+          <h1 className="text-4xl font-semibold tracking-tight">Borradores, emision y cancelacion</h1>
           <p className="max-w-3xl text-lg leading-8 text-stone-700">
-            Este bloque deja el dominio preparado para crear facturas en borrador, recalcular importes en backend y duplicar estructura antes de la emision estricta.
+            Este bloque deja el dominio preparado para crear borradores, emitir con numeracion correlativa, congelar snapshots fiscales y cancelar con motivo cuando no existan pagos.
           </p>
         </div>
 

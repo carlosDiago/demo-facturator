@@ -5,19 +5,24 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import {
+  auditLogs,
   clients,
+  companyProfiles,
   invoiceItems,
   invoices,
   invoiceSeries,
+  payments,
   type DatabaseClient,
 } from "@demo-facturator/database";
 import {
+  cancelInvoiceSchema,
   draftInvoiceSchema,
   type DraftInvoiceInput,
+  type InvoiceActionResponse,
   type InvoiceResponse,
   type InvoicesListResponse,
 } from "@demo-facturator/shared";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { DATABASE_CLIENT } from "../database/database.constants";
 
 @Injectable()
@@ -89,18 +94,16 @@ export class InvoicesService {
         })),
       );
 
-      const fullInvoice = await tx.query.invoices.findFirst({
-        where: (table, operators) => operators.eq(table.id, created.id),
-        with: {
-          invoiceItems: {
-            orderBy: [asc(invoiceItems.sortOrder)],
-          },
-        },
-      });
+      const fullInvoice = await this.findInvoiceWithTx(tx, created.id);
 
-      if (!fullInvoice) {
-        throw new NotFoundException("Factura no encontrada tras crearla");
-      }
+      await tx.insert(auditLogs).values({
+        organizationId,
+        actorUserId: userId,
+        entityType: "invoice",
+        entityId: created.id,
+        action: "invoice_created",
+        metadataJson: { status: "draft" },
+      });
 
       return { invoice: mapInvoice(fullInvoice) };
     });
@@ -161,18 +164,16 @@ export class InvoicesService {
         })),
       );
 
-      const fullInvoice = await tx.query.invoices.findFirst({
-        where: (table, operators) => operators.eq(table.id, id),
-        with: {
-          invoiceItems: {
-            orderBy: [asc(invoiceItems.sortOrder)],
-          },
-        },
-      });
+      const fullInvoice = await this.findInvoiceWithTx(tx, id);
 
-      if (!fullInvoice) {
-        throw new NotFoundException("Factura no encontrada tras actualizarla");
-      }
+      await tx.insert(auditLogs).values({
+        organizationId,
+        actorUserId: userId,
+        entityType: "invoice",
+        entityId: id,
+        action: "invoice_updated",
+        metadataJson: { status: "draft" },
+      });
 
       return { invoice: mapInvoice(fullInvoice) };
     });
@@ -192,7 +193,7 @@ export class InvoicesService {
     const existing = await this.findInvoice(organizationId, id);
     const full = mapInvoice(existing);
 
-    return this.create(organizationId, userId, {
+    const duplicated = await this.create(organizationId, userId, {
       clientId: full.clientId,
       seriesId: full.seriesId,
       issueDate: full.issueDate,
@@ -207,6 +208,177 @@ export class InvoicesService {
         vatRate: Number(item.vatRate),
         irpfRate: Number(item.irpfRate),
       })),
+    });
+
+    await this.db.insert(auditLogs).values({
+      organizationId,
+      actorUserId: userId,
+      entityType: "invoice",
+      entityId: duplicated.invoice.id,
+      action: "invoice_duplicated",
+      metadataJson: { sourceInvoiceId: id },
+    });
+
+    return duplicated;
+  }
+
+  async issue(
+    organizationId: string,
+    userId: string,
+    id: string,
+  ): Promise<InvoiceActionResponse> {
+    const existing = await this.findInvoice(organizationId, id);
+
+    if (existing.status !== "draft") {
+      throw new BadRequestException("Solo se pueden emitir facturas en borrador");
+    }
+
+    if (existing.invoiceItems.length === 0) {
+      throw new BadRequestException("La factura debe tener al menos una linea");
+    }
+
+    const issuer = await this.db.query.companyProfiles.findFirst({
+      where: (table, operators) => operators.eq(table.organizationId, organizationId),
+    });
+
+    if (!issuer) {
+      throw new BadRequestException("No hay perfil fiscal configurado para emitir");
+    }
+
+    const client = await this.db.query.clients.findFirst({
+      where: (table, operators) =>
+        operators.and(
+          operators.eq(table.id, existing.clientId),
+          operators.eq(table.organizationId, organizationId),
+          operators.eq(table.isActive, true),
+        ),
+    });
+
+    if (!client) {
+      throw new BadRequestException("El cliente asociado ya no esta disponible");
+    }
+
+    return this.db.transaction(async (tx) => {
+      const [updatedSeries] = await tx
+        .update(invoiceSeries)
+        .set({
+          currentNumber: sql`${invoiceSeries.currentNumber} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(invoiceSeries.id, existing.seriesId), eq(invoiceSeries.organizationId, organizationId)))
+        .returning({
+          currentNumber: invoiceSeries.currentNumber,
+          prefix: invoiceSeries.prefix,
+          code: invoiceSeries.code,
+        });
+
+      if (!updatedSeries) {
+        throw new NotFoundException("Serie no encontrada para emitir");
+      }
+
+      const nextNumber = updatedSeries.currentNumber;
+      const fullNumber = `${updatedSeries.prefix || updatedSeries.code}-${nextNumber}`;
+
+      await tx
+        .update(invoices)
+        .set({
+          number: nextNumber,
+          fullNumber,
+          status: "issued",
+          issuedAt: new Date(),
+          issuedByUserId: userId,
+          amountDue: existing.totalAmount,
+          issuerLegalName: issuer.legalName,
+          issuerTaxId: issuer.taxId,
+          issuerAddressLine1: issuer.addressLine1,
+          issuerPostalCode: issuer.postalCode,
+          issuerCity: issuer.city,
+          issuerProvince: issuer.province,
+          issuerCountryCode: issuer.countryCode,
+          clientLegalName: client.legalName,
+          clientTaxId: client.taxId,
+          clientAddressLine1: client.addressLine1,
+          clientPostalCode: client.postalCode,
+          clientCity: client.city,
+          clientProvince: client.province,
+          clientCountryCode: client.countryCode,
+          updatedByUserId: userId,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(invoices.id, id), eq(invoices.organizationId, organizationId)));
+
+      await tx.insert(auditLogs).values({
+        organizationId,
+        actorUserId: userId,
+        entityType: "invoice",
+        entityId: id,
+        action: "invoice_issued",
+        metadataJson: { fullNumber, number: nextNumber },
+      });
+
+      const fullInvoice = await this.findInvoiceWithTx(tx, id);
+
+      return {
+        invoice: mapInvoice(fullInvoice),
+        message: `Factura emitida como ${fullNumber}`,
+      };
+    });
+  }
+
+  async cancel(
+    organizationId: string,
+    userId: string,
+    id: string,
+    body: unknown,
+  ): Promise<InvoiceActionResponse> {
+    const existing = await this.findInvoice(organizationId, id);
+
+    if (existing.status !== "issued") {
+      throw new BadRequestException("Solo se pueden cancelar facturas emitidas sin pagos");
+    }
+
+    const input = cancelInvoiceSchema.parse(body);
+
+    const relatedPayment = await this.db.query.payments.findFirst({
+      where: (table, operators) =>
+        operators.and(
+          operators.eq(table.invoiceId, id),
+          operators.eq(table.organizationId, organizationId),
+        ),
+    });
+
+    if (relatedPayment) {
+      throw new BadRequestException("No se puede cancelar una factura con pagos registrados");
+    }
+
+    return this.db.transaction(async (tx) => {
+      await tx
+        .update(invoices)
+        .set({
+          status: "cancelled",
+          cancelledAt: new Date(),
+          cancelledByUserId: userId,
+          cancellationReason: input.reason,
+          updatedByUserId: userId,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(invoices.id, id), eq(invoices.organizationId, organizationId)));
+
+      await tx.insert(auditLogs).values({
+        organizationId,
+        actorUserId: userId,
+        entityType: "invoice",
+        entityId: id,
+        action: "invoice_cancelled",
+        metadataJson: { reason: input.reason },
+      });
+
+      const fullInvoice = await this.findInvoiceWithTx(tx, id);
+
+      return {
+        invoice: mapInvoice(fullInvoice),
+        message: "Factura cancelada correctamente",
+      };
     });
   }
 
@@ -238,7 +410,7 @@ export class InvoicesService {
     }
   }
 
-  private async findInvoice(organizationId: string, id: string) {
+  private async findInvoice(organizationId: string, id: string): Promise<InvoiceWithItems> {
     const invoice = await this.db.query.invoices.findFirst({
       where: (table, operators) =>
         operators.and(
@@ -256,9 +428,30 @@ export class InvoicesService {
       throw new NotFoundException("Factura no encontrada");
     }
 
-    return invoice;
+    return invoice as InvoiceWithItems;
+  }
+
+  private async findInvoiceWithTx(tx: any, id: string): Promise<InvoiceWithItems> {
+    const invoice = await tx.query.invoices.findFirst({
+      where: (table: any, operators: any) => operators.eq(table.id, id),
+      with: {
+        invoiceItems: {
+          orderBy: [asc(invoiceItems.sortOrder)],
+        },
+      },
+    });
+
+    if (!invoice) {
+      throw new NotFoundException("Factura no encontrada");
+    }
+
+    return invoice as InvoiceWithItems;
   }
 }
+
+type InvoiceWithItems = typeof invoices.$inferSelect & {
+  invoiceItems: Array<typeof invoiceItems.$inferSelect>;
+};
 
 function calculateTotals(input: DraftInvoiceInput) {
   const items = input.items.map((item) => {
@@ -304,7 +497,7 @@ function toRate(value: number) {
   return value.toFixed(2);
 }
 
-function mapInvoice(invoice: typeof invoices.$inferSelect & { invoiceItems: typeof invoiceItems.$inferSelect[] }) {
+function mapInvoice(invoice: InvoiceWithItems) {
   return {
     id: invoice.id,
     organizationId: invoice.organizationId,
@@ -324,6 +517,9 @@ function mapInvoice(invoice: typeof invoices.$inferSelect & { invoiceItems: type
     totalAmount: invoice.totalAmount,
     amountPaid: invoice.amountPaid,
     amountDue: invoice.amountDue,
+    issuedAt: invoice.issuedAt?.toISOString() ?? null,
+    cancelledAt: invoice.cancelledAt?.toISOString() ?? null,
+    cancellationReason: invoice.cancellationReason,
     items: invoice.invoiceItems.map((item) => ({
       id: item.id,
       sortOrder: item.sortOrder,

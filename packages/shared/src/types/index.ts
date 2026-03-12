@@ -108,5 +108,8 @@ export type Invoice = {
   totalAmount: string;
   amountPaid: string;
   amountDue: string;
+  issuedAt: string | null;
+  cancelledAt: string | null;
+  cancellationReason: string | null;
   items: InvoiceItem[];
 };

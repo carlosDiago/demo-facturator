@@ -63,6 +63,24 @@ Tras ejecutar el seed inicial, queda disponible este usuario:
 - `docs/database/overview.md`
 - `docs/product/roadmap.md`
 
+## Skills para agentes
+
+Este repo incluye skills reutilizables para herramientas compatibles como OpenCode y Claude Code.
+
+- Compatibilidad OpenCode: `.opencode/skills/`
+- Compatibilidad Claude: `.claude/skills/`
+
+Skills disponibles actualmente:
+
+- `repo-architecture`
+- `facturacion-backend`
+- `forms-and-validation`
+- `ask-questions-if-underspecified`
+- `drizzle-migrations`
+- `documentation-guidelines`
+
+Para que se descubran correctamente, abre la herramienta desde la raiz del repositorio.
+
 ## Nota sobre Supabase
 
 `supabase_schema.sql` se mantiene solo como referencia historica del enfoque inicial. La nueva direccion del proyecto es backend propio + PostgreSQL propio.
