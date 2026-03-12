@@ -1,0 +1,20 @@
+{
+  "name": "@demo-facturator/shared",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "lint": "node -e \"console.log('Shared lint configuration pending')\"",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "node -e \"console.log('No tests configured for shared yet')\""
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.8.2"
+  }
+}
