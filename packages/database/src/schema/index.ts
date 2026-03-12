@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   date,
@@ -399,6 +399,25 @@ export const auditLogs = pgTable("audit_logs", {
     .notNull()
     .defaultNow(),
 });
+
+export const invoicesRelations = relations(invoices, ({ many, one }) => ({
+  items: many(invoiceItems),
+  client: one(clients, {
+    fields: [invoices.clientId],
+    references: [clients.id],
+  }),
+  series: one(invoiceSeries, {
+    fields: [invoices.seriesId],
+    references: [invoiceSeries.id],
+  }),
+}));
+
+export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceItems.invoiceId],
+    references: [invoices.id],
+  }),
+}));
 
 export const schema = {
   organizationStatusEnum,

@@ -36,7 +36,7 @@ export class InvoicesService {
       where: (table, operators) => operators.eq(table.organizationId, organizationId),
       orderBy: [desc(invoices.createdAt)],
       with: {
-        invoiceItems: {
+        items: {
           orderBy: [asc(invoiceItems.sortOrder)],
         },
       },
@@ -235,7 +235,7 @@ export class InvoicesService {
       throw new BadRequestException("Solo se pueden emitir facturas en borrador");
     }
 
-    if (existing.invoiceItems.length === 0) {
+    if (existing.items.length === 0) {
       throw new BadRequestException("La factura debe tener al menos una linea");
     }
 
@@ -456,7 +456,7 @@ export class InvoicesService {
     pdf.fontSize(14).text("Conceptos", { underline: true });
     pdf.moveDown(0.5);
 
-    invoice.invoiceItems.forEach((item) => {
+    invoice.items.forEach((item) => {
       pdf.fontSize(11).text(item.description);
       pdf
         .fontSize(10)
@@ -526,7 +526,7 @@ export class InvoicesService {
           operators.eq(table.organizationId, organizationId),
         ),
       with: {
-        invoiceItems: {
+        items: {
           orderBy: [asc(invoiceItems.sortOrder)],
         },
       },
@@ -543,7 +543,7 @@ export class InvoicesService {
     const invoice = await tx.query.invoices.findFirst({
       where: (table: any, operators: any) => operators.eq(table.id, id),
       with: {
-        invoiceItems: {
+        items: {
           orderBy: [asc(invoiceItems.sortOrder)],
         },
       },
@@ -558,7 +558,7 @@ export class InvoicesService {
 }
 
 type InvoiceWithItems = typeof invoices.$inferSelect & {
-  invoiceItems: Array<typeof invoiceItems.$inferSelect>;
+  items: Array<typeof invoiceItems.$inferSelect>;
 };
 
 function calculateTotals(input: DraftInvoiceInput) {
@@ -628,7 +628,7 @@ function mapInvoice(invoice: InvoiceWithItems) {
     issuedAt: invoice.issuedAt?.toISOString() ?? null,
     cancelledAt: invoice.cancelledAt?.toISOString() ?? null,
     cancellationReason: invoice.cancellationReason,
-    items: invoice.invoiceItems.map((item) => ({
+    items: invoice.items.map((item) => ({
       id: item.id,
       sortOrder: item.sortOrder,
       description: item.description,
