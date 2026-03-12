@@ -5,11 +5,13 @@ export type ApiHealthResponse = {
 
 import type {
   AuthUser,
+  AuditLog,
   Client,
   CompanyProfile,
   Invoice,
   InvoiceSeries,
   OrganizationSummary,
+  Payment,
 } from "../types";
 
 export type AuthSessionResponse = {
@@ -52,4 +54,17 @@ export type InvoicesListResponse = {
 export type InvoiceActionResponse = {
   invoice: Invoice;
   message: string;
+};
+
+export type PaymentsListResponse = {
+  payments: Payment[];
+};
+
+export type PaymentResponse = {
+  payment: Payment;
+  invoice: Invoice;
+};
+
+export type AuditLogListResponse = {
+  auditLogs: AuditLog[];
 };

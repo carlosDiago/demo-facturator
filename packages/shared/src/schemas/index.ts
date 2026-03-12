@@ -96,3 +96,13 @@ export const cancelInvoiceSchema = z.object({
 });
 
 export type CancelInvoiceInput = z.infer<typeof cancelInvoiceSchema>;
+
+export const createPaymentSchema = z.object({
+  paymentDate: z.string().date(),
+  amount: z.coerce.number().positive(),
+  method: z.enum(["bank_transfer", "cash", "card", "bizum", "other"]),
+  reference: z.string().max(120).trim().optional().nullable(),
+  notes: z.string().max(1000).trim().optional().nullable(),
+});
+
+export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;

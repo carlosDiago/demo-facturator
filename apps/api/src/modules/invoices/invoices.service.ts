@@ -15,6 +15,7 @@ import {
   type DatabaseClient,
 } from "@demo-facturator/database";
 import {
+  type AuditLogListResponse,
   cancelInvoiceSchema,
   draftInvoiceSchema,
   type DraftInvoiceInput,
@@ -23,6 +24,7 @@ import {
   type InvoicesListResponse,
 } from "@demo-facturator/shared";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
+import PDFDocument from "pdfkit";
 import { DATABASE_CLIENT } from "../database/database.constants";
 
 @Injectable()
@@ -379,6 +381,112 @@ export class InvoicesService {
         invoice: mapInvoice(fullInvoice),
         message: "Factura cancelada correctamente",
       };
+    });
+  }
+
+  async getAuditLogs(organizationId: string, id: string): Promise<AuditLogListResponse> {
+    await this.findInvoice(organizationId, id);
+
+    const rows = await this.db.query.auditLogs.findMany({
+      where: (table, operators) =>
+        operators.and(
+          operators.eq(table.organizationId, organizationId),
+          operators.eq(table.entityType, "invoice"),
+          operators.eq(table.entityId, id),
+        ),
+      orderBy: [desc(auditLogs.createdAt)],
+    });
+
+    return {
+      auditLogs: rows.map((row) => ({
+        id: row.id,
+        entityType: row.entityType,
+        entityId: row.entityId,
+        action: row.action,
+        createdAt: row.createdAt.toISOString(),
+        metadata: (row.metadataJson as Record<string, unknown>) ?? {},
+      })),
+    };
+  }
+
+  async generatePdf(organizationId: string, id: string): Promise<Buffer> {
+    const invoice = await this.findInvoice(organizationId, id);
+
+    if (invoice.status === "draft") {
+      throw new BadRequestException("Solo se puede generar PDF de facturas emitidas o posteriores");
+    }
+
+    const pdf = new PDFDocument({ margin: 48, size: "A4" });
+    const chunks: Buffer[] = [];
+
+    pdf.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+
+    pdf.fontSize(22).text("Factura", { align: "left" });
+    pdf.moveDown(0.5);
+    pdf.fontSize(12).text(`Numero: ${invoice.fullNumber ?? "Pendiente"}`);
+    pdf.text(`Estado: ${invoice.status}`);
+    pdf.text(`Fecha de emision: ${invoice.issueDate}`);
+    if (invoice.dueDate) {
+      pdf.text(`Vencimiento: ${invoice.dueDate}`);
+    }
+
+    pdf.moveDown();
+    pdf.fontSize(14).text("Emisor", { underline: true });
+    pdf.fontSize(11).text(invoice.issuerLegalName ?? "-");
+    pdf.text(invoice.issuerTaxId ?? "-");
+    pdf.text(invoice.issuerAddressLine1 ?? "-");
+    pdf.text(
+      [invoice.issuerPostalCode, invoice.issuerCity, invoice.issuerProvince]
+        .filter(Boolean)
+        .join(" "),
+    );
+
+    pdf.moveDown();
+    pdf.fontSize(14).text("Cliente", { underline: true });
+    pdf.fontSize(11).text(invoice.clientLegalName ?? "-");
+    pdf.text(invoice.clientTaxId ?? "-");
+    pdf.text(invoice.clientAddressLine1 ?? "-");
+    pdf.text(
+      [invoice.clientPostalCode, invoice.clientCity, invoice.clientProvince]
+        .filter(Boolean)
+        .join(" "),
+    );
+
+    pdf.moveDown();
+    pdf.fontSize(14).text("Conceptos", { underline: true });
+    pdf.moveDown(0.5);
+
+    invoice.invoiceItems.forEach((item) => {
+      pdf.fontSize(11).text(item.description);
+      pdf
+        .fontSize(10)
+        .fillColor("#555")
+        .text(
+          `Cantidad ${item.quantity} x ${item.unitPrice} EUR | IVA ${item.vatRate}% | IRPF ${item.irpfRate}% | Total ${item.lineTotal} EUR`,
+        )
+        .fillColor("#000");
+      pdf.moveDown(0.4);
+    });
+
+    pdf.moveDown();
+    pdf.fontSize(14).text("Totales", { underline: true });
+    pdf.fontSize(11).text(`Base: ${invoice.subtotalAmount} EUR`);
+    pdf.text(`IVA: ${invoice.vatAmount} EUR`);
+    pdf.text(`IRPF: ${invoice.irpfAmount} EUR`);
+    pdf.text(`Total: ${invoice.totalAmount} EUR`);
+    pdf.text(`Cobrado: ${invoice.amountPaid} EUR`);
+    pdf.text(`Pendiente: ${invoice.amountDue} EUR`);
+
+    if (invoice.cancellationReason) {
+      pdf.moveDown();
+      pdf.fontSize(12).text(`Motivo de cancelacion: ${invoice.cancellationReason}`);
+    }
+
+    pdf.end();
+
+    return new Promise((resolve, reject) => {
+      pdf.on("end", () => resolve(Buffer.concat(chunks)));
+      pdf.on("error", reject);
     });
   }
 

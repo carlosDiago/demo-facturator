@@ -7,6 +7,7 @@ import { DatabaseModule } from "./modules/database/database.module";
 import { InvoiceSeriesModule } from "./modules/invoice-series/invoice-series.module";
 import { InvoicesModule } from "./modules/invoices/invoices.module";
 import { OrganizationsModule } from "./modules/organizations/organizations.module";
+import { PaymentsModule } from "./modules/payments/payments.module";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { OrganizationsModule } from "./modules/organizations/organizations.modul
     ClientsModule,
     InvoiceSeriesModule,
     InvoicesModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
 })

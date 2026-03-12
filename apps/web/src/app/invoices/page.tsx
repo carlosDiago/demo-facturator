@@ -7,6 +7,10 @@ const draftEndpoints = [
   "POST /api/invoices/:id/duplicate",
   "POST /api/invoices/:id/issue",
   "POST /api/invoices/:id/cancel",
+  "GET /api/invoices/:id/audit",
+  "GET /api/invoices/:id/pdf",
+  "GET /api/invoices/:id/payments",
+  "POST /api/invoices/:id/payments",
 ];
 
 export default function InvoicesPage() {
@@ -17,9 +21,9 @@ export default function InvoicesPage() {
           <span className="inline-flex rounded-full border border-emerald-900/15 bg-emerald-100 px-4 py-1 text-sm uppercase tracking-[0.2em] text-emerald-950">
             Facturas
           </span>
-          <h1 className="text-4xl font-semibold tracking-tight">Borradores, emision y cancelacion</h1>
+          <h1 className="text-4xl font-semibold tracking-tight">Emision, pagos, PDF y auditoria</h1>
           <p className="max-w-3xl text-lg leading-8 text-stone-700">
-            Este bloque deja el dominio preparado para crear borradores, emitir con numeracion correlativa, congelar snapshots fiscales y cancelar con motivo cuando no existan pagos.
+            El backend ya encadena borradores, emision estricta, registro de pagos, PDF de factura y timeline de auditoria para el detalle final del MVP.
           </p>
         </div>
 

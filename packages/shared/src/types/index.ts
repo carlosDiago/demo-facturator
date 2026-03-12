@@ -113,3 +113,30 @@ export type Invoice = {
   cancellationReason: string | null;
   items: InvoiceItem[];
 };
+
+export type PaymentMethod =
+  | "bank_transfer"
+  | "cash"
+  | "card"
+  | "bizum"
+  | "other";
+
+export type Payment = {
+  id: string;
+  invoiceId: string;
+  organizationId: string;
+  paymentDate: string;
+  amount: string;
+  method: PaymentMethod;
+  reference: string | null;
+  notes: string | null;
+};
+
+export type AuditLog = {
+  id: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  createdAt: string;
+  metadata: Record<string, unknown>;
+};

@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import type {
+  AuditLogListResponse,
   InvoiceActionResponse,
   InvoiceResponse,
   InvoicesListResponse,
@@ -19,6 +20,8 @@ import { CurrentAuth } from "../../common/current-auth.decorator";
 import { AuthGuard } from "../auth/auth.guard";
 import { AuthService } from "../auth/auth.service";
 import { InvoicesService } from "./invoices.service";
+import type { Response } from "express";
+import { Res } from "@nestjs/common";
 
 @Controller("invoices")
 @UseGuards(AuthGuard)
@@ -100,5 +103,32 @@ export class InvoicesController {
   ): Promise<InvoiceActionResponse> {
     const organization = await this.authService.requireCurrentOrganization(auth.user.id);
     return this.invoicesService.cancel(organization.id, auth.user.id, id, body);
+  }
+
+  @Get(":id/audit")
+  async audit(
+    @CurrentAuth() auth: NonNullable<AuthenticatedRequest["auth"]>,
+    @Param("id") id: string,
+  ): Promise<AuditLogListResponse> {
+    const organization = await this.authService.requireCurrentOrganization(auth.user.id);
+    return this.invoicesService.getAuditLogs(organization.id, id);
+  }
+
+  @Get(":id/pdf")
+  async pdf(
+    @CurrentAuth() auth: NonNullable<AuthenticatedRequest["auth"]>,
+    @Param("id") id: string,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<Buffer> {
+    const organization = await this.authService.requireCurrentOrganization(auth.user.id);
+    const pdf = await this.invoicesService.generatePdf(organization.id, id);
+
+    response.setHeader("Content-Type", "application/pdf");
+    response.setHeader(
+      "Content-Disposition",
+      `inline; filename="factura-${id}.pdf"`,
+    );
+
+    return pdf;
   }
 }
