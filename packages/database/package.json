@@ -1,0 +1,27 @@
+{
+  "name": "@demo-facturator/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx src/seeds/index.ts",
+    "db:studio": "drizzle-kit studio",
+    "lint": "node -e \"console.log('Database lint configuration pending')\"",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "node -e \"console.log('No tests configured for database yet')\""
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.5",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "drizzle-kit": "^0.31.4",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.2"
+  }
+}

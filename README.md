@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Demo Facturator
 
-## Getting Started
+Monorepo para construir una plataforma de facturacion para Espana con backend propio, base de datos propia y trazabilidad estricta.
 
-First, run the development server:
+## Estructura
+
+- `apps/web`: frontend en Next.js.
+- `apps/api`: backend en NestJS.
+- `packages/shared`: contratos, esquemas y utilidades compartidas.
+- `packages/database`: futura capa de PostgreSQL y migraciones.
+- `packages/config`: configuracion compartida de TypeScript y lint.
+- `docs`: arquitectura, base de datos y roadmap.
+
+## Stack objetivo
+
+- `pnpm` workspaces
+- `turbo`
+- `Next.js`
+- `NestJS`
+- `PostgreSQL`
+
+## Primeros pasos
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+corepack pnpm install
+corepack pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+En esta fase la estructura base del monorepo ya esta preparada para desarrollar los siguientes bloques: base de datos, auth propia, organizaciones, clientes, series y facturacion.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Base de datos local
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+docker compose -f infra/compose/docker-compose.yml up -d postgres
+corepack pnpm db:generate
+corepack pnpm db:migrate
+corepack pnpm db:seed
+```
 
-## Learn More
+La cadena de conexion por defecto esta documentada en `.env.example`.
 
-To learn more about Next.js, take a look at the following resources:
+## Credenciales demo
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Tras ejecutar el seed inicial, queda disponible este usuario:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- email: `demo@facturator.local`
+- password: `changeme123`
 
-## Deploy on Vercel
+## API actual
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `GET /api/health`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `GET /api/organizations/current`
+- `POST /api/organizations`
+- `GET /api/company-profile`
+- `PUT /api/company-profile`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Documentacion
+
+- `docs/architecture/overview.md`
+- `docs/database/overview.md`
+- `docs/product/roadmap.md`
+
+## Skills para agentes
+
+Este repo incluye skills reutilizables para herramientas compatibles como OpenCode y Claude Code.
+
+- Compatibilidad OpenCode: `.opencode/skills/`
+- Compatibilidad Claude: `.claude/skills/`
+
+Skills disponibles actualmente:
+
+- `repo-architecture`
+- `facturacion-backend`
+- `forms-and-validation`
+- `ask-questions-if-underspecified`
+- `drizzle-migrations`
+- `documentation-guidelines`
+
+Prompts de prueba:
+
+- `docs/skills-test-prompts.md`
+
+Para que se descubran correctamente, abre la herramienta desde la raiz del repositorio.
+
+## Nota sobre Supabase
+
+`supabase_schema.sql` se mantiene solo como referencia historica del enfoque inicial. La nueva direccion del proyecto es backend propio + PostgreSQL propio.
