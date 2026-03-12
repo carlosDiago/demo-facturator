@@ -134,6 +134,7 @@ async function seed() {
   }
 
   console.log("Seed inicial completado");
+  await db.$client.end();
 }
 
 seed().catch((error) => {
