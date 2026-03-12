@@ -3,7 +3,14 @@ export type ApiHealthResponse = {
   status: "ok";
 };
 
-import type { AuthUser, CompanyProfile, OrganizationSummary } from "../types";
+import type {
+  AuthUser,
+  Client,
+  CompanyProfile,
+  Invoice,
+  InvoiceSeries,
+  OrganizationSummary,
+} from "../types";
 
 export type AuthSessionResponse = {
   user: AuthUser;
@@ -16,4 +23,28 @@ export type CurrentOrganizationResponse = {
 
 export type CompanyProfileResponse = {
   profile: CompanyProfile | null;
+};
+
+export type ClientResponse = {
+  client: Client;
+};
+
+export type ClientsListResponse = {
+  clients: Client[];
+};
+
+export type InvoiceSeriesResponse = {
+  series: InvoiceSeries;
+};
+
+export type InvoiceSeriesListResponse = {
+  series: InvoiceSeries[];
+};
+
+export type InvoiceResponse = {
+  invoice: Invoice;
+};
+
+export type InvoicesListResponse = {
+  invoices: Invoice[];
 };

@@ -1,8 +1,12 @@
 {
   "extends": "../../packages/config/typescript/nest.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "outDir": "./dist",
-    "rootDir": "./src"
+    "paths": {
+      "@demo-facturator/shared": ["../../packages/shared/src/index.ts"],
+      "@demo-facturator/database": ["../../packages/database/src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
